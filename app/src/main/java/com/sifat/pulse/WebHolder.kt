@@ -11,5 +11,17 @@ object WebHolder {
     private val main = Handler(Looper.getMainLooper())
     fun exec(js: String) { main.post { web?.evaluateJavascript(js, null) } }
     /** Keep the page's renderer + timers alive while the app is in the background. */
-    fun keepAlive() { web?.let { it.onResume(); it.resumeTimers() } }
+    fun keepAlive() {
+        web?.let { webView ->
+            webView.onResume()
+            webView.resumeTimers()
+            webView.evaluateJavascript("""
+                document.querySelectorAll('video,audio').forEach(function(m){
+                    if (typeof m.play === 'function' && m.paused) {
+                        m.play().catch(function(){});
+                    }
+                });
+            """.trimIndent(), null)
+        }
+    }
 }

@@ -15,6 +15,7 @@ class WebAudioService : Service() {
     private var playing = true
     private var title = "Browser audio"
     private val pause = "document.querySelectorAll('video,audio').forEach(function(m){m.pause()})"
+    private val playToggle = "document.querySelectorAll('video,audio').forEach(function(m){m.paused?m.play().catch(function(){}) : m.pause()})"
 
     override fun onBind(i: Intent?): IBinder? = null
     override fun onCreate() { super.onCreate(); WebHolder.serviceRunning = true }
@@ -23,9 +24,24 @@ class WebAudioService : Service() {
 
     override fun onStartCommand(i: Intent?, flags: Int, startId: Int): Int {
         when (i?.action) {
-            "stop" -> { WebHolder.exec(pause); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); return START_NOT_STICKY }
-            "toggle" -> { WebHolder.exec("document.querySelectorAll('video,audio').forEach(function(m){m.paused?m.play():m.pause()})"); return START_NOT_STICKY }
-            else -> { playing = i?.getBooleanExtra("playing", true) ?: true; title = i?.getStringExtra("title") ?: title }
+            "stop" -> {
+                playing = false
+                WebHolder.exec(pause)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            "toggle" -> {
+                playing = !playing
+                WebHolder.exec(if (playing) playToggle else pause)
+                val n = notification()
+                if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(1, n)
+                return START_NOT_STICKY
+            }
+            else -> {
+                playing = i?.getBooleanExtra("playing", true) ?: true
+                title = i?.getStringExtra("title") ?: title
+            }
         }
         val n = notification()
         if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(1, n)
@@ -40,10 +56,15 @@ class WebAudioService : Service() {
         nm.createNotificationChannel(NotificationChannel("web_audio", "Browser audio", NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this, "web_audio")
-            .setSmallIcon(android.R.drawable.ic_media_play).setContentTitle(title).setContentText("Playing from browser")
-            .setContentIntent(open).setOngoing(playing).setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setSmallIcon(if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)
+            .setContentTitle(title)
+            .setContentText(if (playing) "Playing from browser" else "Paused from browser")
+            .setContentIntent(open)
+            .setOngoing(playing)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .addAction(if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play, if (playing) "Pause" else "Play", pi("toggle"))
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", pi("stop"))
-            .setStyle(Notification.MediaStyle().setShowActionsInCompactView(0, 1)).build()
+            .setStyle(Notification.MediaStyle().setShowActionsInCompactView(0, 1))
+            .build()
     }
 }

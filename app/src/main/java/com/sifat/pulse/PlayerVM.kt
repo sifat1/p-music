@@ -21,7 +21,14 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 
-data class Track(val id: Long, val title: String, val artist: String, val albumId: Long, val uri: Uri) {
+data class Track(
+    val id: Long,
+    val title: String,
+    val artist: String,
+    val albumId: Long,
+    val uri: Uri,
+    val dateAdded: Long = 0L
+) {
     val art: Uri get() = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId)
     fun toItem(): MediaItem = MediaItem.Builder().setMediaId(id.toString()).setUri(uri)
         .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).setArtworkUri(art).build()).build()
@@ -66,11 +73,32 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
         tracks = try {
             val c = getApplication<Application>().contentResolver.query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM_ID),
+                arrayOf(
+                    MediaStore.Audio.Media._ID,
+                    MediaStore.Audio.Media.TITLE,
+                    MediaStore.Audio.Media.ARTIST,
+                    MediaStore.Audio.Media.ALBUM_ID,
+                    MediaStore.Audio.Media.DATE_ADDED
+                ),
                 "${MediaStore.Audio.Media.IS_MUSIC}!=0 AND ${MediaStore.Audio.Media.DURATION}>30000", null,
-                "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE")
-            buildList { c?.use { while (it.moveToNext()) add(Track(it.getLong(0), it.getString(1) ?: "Unknown", it.getString(2) ?: "Unknown artist", it.getLong(3),
-                ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it.getLong(0)))) } }
+                "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE"
+            )
+            buildList {
+                c?.use {
+                    while (it.moveToNext()) {
+                        add(
+                            Track(
+                                id = it.getLong(0),
+                                title = it.getString(1) ?: "Unknown",
+                                artist = it.getString(2) ?: "Unknown artist",
+                                albumId = it.getLong(3),
+                                uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it.getLong(0)),
+                                dateAdded = it.getLong(4)
+                            )
+                        )
+                    }
+                }
+            }
         } catch (e: SecurityException) { emptyList() }
     }
 
