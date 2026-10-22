@@ -48,6 +48,7 @@ import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     override fun onPause() { super.onPause(); WebHolder.keepAlive() }
+    override fun onStop() { super.onStop(); WebHolder.keepAlive() }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

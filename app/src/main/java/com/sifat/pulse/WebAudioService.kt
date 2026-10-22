@@ -14,18 +14,57 @@ import android.os.IBinder
 class WebAudioService : Service() {
     private var playing = true
     private var title = "Browser audio"
-    private val pause = "document.querySelectorAll('video,audio').forEach(function(m){m.pause()})"
-    private val playToggle = "document.querySelectorAll('video,audio').forEach(function(m){m.paused?m.play().catch(function(){}) : m.pause()})"
+
+    private val pause = """
+        (function(){
+            function getAll(root){
+                root = root || document;
+                var res = Array.from(root.querySelectorAll('video,audio'));
+                var els = root.querySelectorAll('*');
+                for(var i = 0; i < els.length; i++){
+                    if(els[i].shadowRoot) res = res.concat(getAll(els[i].shadowRoot));
+                }
+                return res;
+            }
+            getAll(document).forEach(function(m){
+                if(m && typeof m.pause === 'function') m.pause();
+            });
+        })();
+    """.trimIndent()
+
+    private val play = """
+        (function(){
+            function getAll(root){
+                root = root || document;
+                var res = Array.from(root.querySelectorAll('video,audio'));
+                var els = root.querySelectorAll('*');
+                for(var i = 0; i < els.length; i++){
+                    if(els[i].shadowRoot) res = res.concat(getAll(els[i].shadowRoot));
+                }
+                return res;
+            }
+            getAll(document).forEach(function(m){
+                if(m && typeof m.play === 'function'){
+                    m.play().catch(function(){});
+                }
+            });
+        })();
+    """.trimIndent()
 
     override fun onBind(i: Intent?): IBinder? = null
     override fun onCreate() { super.onCreate(); WebHolder.serviceRunning = true }
-    override fun onDestroy() { WebHolder.serviceRunning = false; super.onDestroy() }
+    override fun onDestroy() {
+        WebHolder.serviceRunning = false
+        WebHolder.keepAliveRequested = false
+        super.onDestroy()
+    }
     override fun onTaskRemoved(rootIntent: Intent?) { if (!playing) stopSelf() }
 
     override fun onStartCommand(i: Intent?, flags: Int, startId: Int): Int {
         when (i?.action) {
             "stop" -> {
                 playing = false
+                WebHolder.keepAliveRequested = false
                 WebHolder.exec(pause)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -33,7 +72,8 @@ class WebAudioService : Service() {
             }
             "toggle" -> {
                 playing = !playing
-                WebHolder.exec(if (playing) playToggle else pause)
+                WebHolder.keepAliveRequested = playing
+                WebHolder.exec(if (playing) play else pause)
                 val n = notification()
                 if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(1, n)
                 return START_NOT_STICKY
@@ -41,6 +81,7 @@ class WebAudioService : Service() {
             else -> {
                 playing = i?.getBooleanExtra("playing", true) ?: true
                 title = i?.getStringExtra("title") ?: title
+                WebHolder.keepAliveRequested = playing
             }
         }
         val n = notification()

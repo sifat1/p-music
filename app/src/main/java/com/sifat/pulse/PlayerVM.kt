@@ -111,11 +111,37 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
         if (u.startsWith("http") && mediaRx.containsMatchIn(Uri.parse(u).path ?: "") && found.none { it.url == u })
             found.add(Found(u, Uri.parse(u).lastPathSegment ?: u))
     }
-    fun scan() = web.evaluateJavascript("""document.querySelectorAll('video,audio').forEach(function(m){
-        var s=m.currentSrc||m.src||''; if(s.indexOf('blob:')==0)Pulse.blob(); else if(s)Pulse.media(s);});""", null)
+    fun scan() = web.evaluateJavascript("""(function(){
+        var seen = new Set();
+        function report(src){
+            if (!src) return;
+            var s = String(src).trim();
+            if (!s || s.indexOf('blob:') === 0) return;
+            if (s.indexOf('http') === 0 && !seen.has(s)) {
+                seen.add(s);
+                try { Pulse.media(s); } catch (e) {}
+            }
+        }
+        function scanRoot(root) {
+            root = root || document;
+            root.querySelectorAll('video,audio,source,track').forEach(function(m){
+                if (m && m.currentSrc) report(m.currentSrc);
+                if (m && m.src) report(m.src);
+            });
+            root.querySelectorAll('video,audio').forEach(function(m){
+                var s = m && (m.currentSrc || m.src || '');
+                if (s && s.indexOf('blob:') === 0) { try { Pulse.blob(); } catch (e) {} }
+            });
+            root.querySelectorAll('*').forEach(function(el){
+                if (el.shadowRoot) scanRoot(el.shadowRoot);
+            });
+        }
+        scanRoot(document);
+    })();""", null)
 
     private fun onWebState(playing: Boolean, title: String) {
         webPlaying = playing
+        WebHolder.keepAliveRequested = playing
         val app = getApplication<Application>()
         try {
             if (playing) {
@@ -126,12 +152,17 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
             }
         } catch (e: Exception) { /* background-start restrictions: ignore */ }
     }
-    private fun pauseWeb() { if (webPlaying) WebHolder.exec("document.querySelectorAll('video,audio').forEach(function(m){m.pause()})") }
+    private fun pauseWeb() { if (webPlaying) WebHolder.exec("(function(){ function getAll(root){ root = root || document; var res = Array.from(root.querySelectorAll('video,audio')); var els = root.querySelectorAll('*'); for(var i=0; i<els.length; i++){ if(els[i].shadowRoot) res = res.concat(getAll(els[i].shadowRoot)); } return res; } getAll(document).forEach(function(m){ if(m && typeof m.pause==='function') m.pause(); }); })();") }
 
     val web: WebView by lazy {
         WebView(getApplication<Application>()).apply {
-            settings.javaScriptEnabled = true; settings.domStorageEnabled = true
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.databaseEnabled = true
+            settings.allowFileAccess = false
+            settings.allowContentAccess = true
             settings.mediaPlaybackRequiresUserGesture = false
+            settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
             addJavascriptInterface(object {
                 @JavascriptInterface fun media(u: String) = add(u)
                 @JavascriptInterface fun blob() { main.post { blobOnly = true } }
@@ -140,9 +171,22 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
                 WebViewCompat.addDocumentStartJavaScript(this, BG_JS, setOf("*"))
             webViewClient = object : WebViewClient() {
-                override fun onPageStarted(v: WebView, u: String, f: Bitmap?) { found.clear(); blobOnly = false; currentUrl = u; v.evaluateJavascript(BG_JS, null) }
-                override fun onPageFinished(v: WebView, u: String) { canBack = v.canGoBack(); scan(); v.postDelayed({ scan() }, 2500) }
-                override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest): WebResourceResponse? { add(r.url.toString()); return null }
+                override fun onPageStarted(v: WebView, u: String, f: Bitmap?) {
+                    found.clear(); blobOnly = false; currentUrl = u
+                    v.evaluateJavascript(BG_JS, null)
+                    v.postDelayed({ scan() }, 400)
+                }
+                override fun onPageFinished(v: WebView, u: String) {
+                    canBack = v.canGoBack();
+                    v.evaluateJavascript(BG_JS, null)
+                    scan();
+                    v.postDelayed({ scan() }, 1000)
+                    v.postDelayed({ scan() }, 2500)
+                }
+                override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest): WebResourceResponse? {
+                    add(r.url.toString())
+                    return null
+                }
             }
             loadUrl("https://duckduckgo.com")
         }.also { WebHolder.web = it }
@@ -161,19 +205,72 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
 
 /** Runs at document start: pages think they are always visible (so they don't auto-pause when minimized) and report play state. */
 private const val BG_JS = """(function(){
-if(window.__pulse)return;window.__pulse=1;
-try{
- Object.defineProperty(document,'hidden',{get:function(){return false},configurable:true});
- Object.defineProperty(document,'visibilityState',{get:function(){return 'visible'},configurable:true});
- Object.defineProperty(document,'webkitHidden',{get:function(){return false},configurable:true});
- Object.defineProperty(document,'webkitVisibilityState',{get:function(){return 'visible'},configurable:true});
-}catch(e){}
-var stop=function(e){e.stopImmediatePropagation();};
-document.addEventListener('visibilitychange',stop,true);
-window.addEventListener('visibilitychange',stop,true);
-window.addEventListener('pagehide',stop,true);
-window.addEventListener('blur',stop,true);
-function rep(){var p=false;document.querySelectorAll('video,audio').forEach(function(m){if(!m.paused&&!m.ended)p=true;});
- try{Pulse.state(p,document.title);}catch(e){}}
-['play','pause','ended'].forEach(function(ev){document.addEventListener(ev,function(){setTimeout(rep,150)},true);});
+try {
+    Object.defineProperty(document, 'hidden', { get: function(){ return false; }, configurable: true });
+    Object.defineProperty(document, 'visibilityState', { get: function(){ return 'visible'; }, configurable: true });
+    Object.defineProperty(document, 'webkitHidden', { get: function(){ return false; }, configurable: true });
+    Object.defineProperty(document, 'webkitVisibilityState', { get: function(){ return 'visible'; }, configurable: true });
+    document.hasFocus = function(){ return true; };
+} catch(e) {}
+
+var stopEvt = function(e){
+    if (e && e.target && (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO')) {
+        e.stopImmediatePropagation();
+    }
+};
+['visibilitychange', 'webkitvisibilitychange', 'pagehide', 'blur', 'freeze'].forEach(function(ev){
+    document.addEventListener(ev, stopEvt, true);
+    window.addEventListener(ev, stopEvt, true);
+});
+
+function getAllMedia(root) {
+    root = root || document;
+    var media = Array.from(root.querySelectorAll('video,audio'));
+    var all = root.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) {
+        if (all[i].shadowRoot) {
+            media = media.concat(getAllMedia(all[i].shadowRoot));
+        }
+    }
+    return media;
+}
+
+var attached = new WeakSet();
+var lastState = null;
+var lastTitle = "";
+
+function rep(){
+    var list = getAllMedia(document);
+    var playing = false;
+    list.forEach(function(m){
+        if (!attached.has(m)) {
+            attached.add(m);
+            ['play', 'pause', 'ended', 'timeupdate', 'playing', 'waiting', 'stalled'].forEach(function(ev){
+                m.addEventListener(ev, function(){ setTimeout(rep, 100); }, true);
+            });
+        }
+        if (!m.paused && !m.ended && m.readyState >= 1) {
+            playing = true;
+        }
+    });
+
+    var title = document.title || "Browser audio";
+    if (playing !== lastState || title !== lastTitle) {
+        lastState = playing;
+        lastTitle = title;
+        try { Pulse.state(playing, title); } catch(e){}
+    }
+}
+
+setInterval(rep, 1000);
+rep();
+
+var observer = new MutationObserver(function(){ rep(); });
+if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+} else {
+    document.addEventListener('DOMContentLoaded', function(){
+        if (document.body) observer.observe(document.body, { childList: true, subtree: true });
+    });
+}
 })();"""

@@ -56,6 +56,8 @@ drawable ic_call_answer_video
 drawable ic_call_answer_video_low
 drawable ic_call_decline
 drawable ic_call_decline_low
+drawable ic_launcher_background
+drawable ic_launcher_foreground
 drawable media3_icon_album
 drawable media3_icon_artist
 drawable media3_icon_block
@@ -270,6 +272,8 @@ layout notification_template_media
 layout notification_template_media_custom
 layout notification_template_part_chronometer
 layout notification_template_part_time
+mipmap ic_launcher
+mipmap ic_launcher_round
 string androidx_startup
 string call_notification_answer_action
 string call_notification_answer_video_action

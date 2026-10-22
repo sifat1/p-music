@@ -4,7 +4,7 @@
             "outputFile": "com.sifat.pulse.app-mergeDebugResources-47:/values-pt-rBR/values-pt-rBR.xml",
             "map": [
                 {
-                    "source": "/home/sifat/.gradle/caches/8.9/transforms/a8efedb4f8da534a835dc02d73cfd29a/transformed/ui-release/res/values-pt-rBR/values-pt-rBR.xml",
+                    "source": "/home/sifat/.gradle/caches/8.9/transforms/85614e16a22cd23e8454ae0308efae19/transformed/jetified-ui-release/res/values-pt-rBR/values-pt-rBR.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -38,7 +38,7 @@
                     }
                 },
                 {
-                    "source": "/home/sifat/.gradle/caches/8.9/transforms/31e5ae066bbb886e78bcc7a65531860f/transformed/foundation-release/res/values-pt-rBR/values-pt-rBR.xml",
+                    "source": "/home/sifat/.gradle/caches/8.9/transforms/9b8ce3a9514b056e5b555ba3c4227663/transformed/jetified-foundation-release/res/values-pt-rBR/values-pt-rBR.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",
@@ -55,7 +55,7 @@
                     }
                 },
                 {
-                    "source": "/home/sifat/.gradle/caches/8.9/transforms/c4466076af7fd65cb27b42c0e08df0c8/transformed/material3-release/res/values-pt-rBR/values-pt-rBR.xml",
+                    "source": "/home/sifat/.gradle/caches/8.9/transforms/01fc1bb3bb57a713f48a41586ca123a1/transformed/jetified-material3-release/res/values-pt-rBR/values-pt-rBR.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
