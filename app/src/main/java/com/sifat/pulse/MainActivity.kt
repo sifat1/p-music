@@ -18,6 +18,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,6 +86,17 @@ enum class SortOption(val label: String) {
     DATE_DESC("Date Added (Newest)"),
     DATE_ASC("Date Added (Oldest)")
 }
+
+data class Bookmark(val name: String, val url: String, val badgeColor: Color)
+
+val defaultBookmarks = listOf(
+    Bookmark("YouTube", "https://m.youtube.com", Color(0xFFFF0000)),
+    Bookmark("Dailymotion", "https://www.dailymotion.com", Color(0xFF0066DC)),
+    Bookmark("Vimeo", "https://vimeo.com", Color(0xFF1AB7EA)),
+    Bookmark("SoundCloud", "https://m.soundcloud.com", Color(0xFFFF5500)),
+    Bookmark("Twitch", "https://m.twitch.tv", Color(0xFF9146FF)),
+    Bookmark("Bilibili", "https://m.bilibili.com", Color(0xFF00A1D6))
+)
 
 @Composable fun App(vm: PlayerVM = viewModel()) {
     var tab by remember { mutableIntStateOf(0) }
@@ -496,11 +509,19 @@ fun normalize(s: String): String {
     var sheet by remember { mutableStateOf(false) }
     LaunchedEffect(vm.currentUrl) { url = vm.currentUrl }
     BackHandler(vm.canBack) { vm.web.goBack() }
+
     Column(Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = {
+                val homeUrl = "https://duckduckgo.com"
+                url = homeUrl
+                vm.web.loadUrl(homeUrl)
+            }) {
+                Icon(Icons.Default.Home, contentDescription = "Home", tint = MaterialTheme.colorScheme.primary)
+            }
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
@@ -521,6 +542,46 @@ fun normalize(s: String): String {
                 Icon(Icons.Default.Refresh, contentDescription = "Reload", tint = MaterialTheme.colorScheme.onSurface)
             }
         }
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(defaultBookmarks) { bookmark ->
+                FilterChip(
+                    selected = false,
+                    onClick = {
+                        url = bookmark.url
+                        vm.web.loadUrl(bookmark.url)
+                    },
+                    label = {
+                        Text(
+                            bookmark.name,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    leadingIcon = {
+                        Box(
+                            modifier = Modifier.size(10.dp)
+                                .clip(CircleShape)
+                                .background(bookmark.badgeColor)
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = false,
+                        borderColor = Color.Transparent
+                    )
+                )
+            }
+        }
+
         Box(Modifier.weight(1f)) {
             AndroidView({ vm.web }, Modifier.fillMaxSize())
             if (vm.found.isNotEmpty()) ExtendedFloatingActionButton(

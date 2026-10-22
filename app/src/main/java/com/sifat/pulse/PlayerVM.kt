@@ -245,14 +245,24 @@ function rep(){
     list.forEach(function(m){
         if (!attached.has(m)) {
             attached.add(m);
-            ['play', 'pause', 'ended', 'timeupdate', 'playing', 'waiting', 'stalled'].forEach(function(ev){
+            ['play', 'pause', 'ended', 'timeupdate', 'playing', 'waiting', 'stalled', 'durationchange', 'loadedmetadata'].forEach(function(ev){
                 m.addEventListener(ev, function(){ setTimeout(rep, 100); }, true);
             });
         }
-        if (!m.paused && !m.ended && m.readyState >= 1) {
+        if (!m.paused && !m.ended) {
             playing = true;
         }
     });
+
+    try {
+        var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+        if (p && typeof p.getPlayerState === 'function') {
+            var st = p.getPlayerState();
+            if (st === 1 || st === 3) {
+                playing = true;
+            }
+        }
+    } catch(e){}
 
     var title = document.title || "Browser audio";
     if (playing !== lastState || title !== lastTitle) {

@@ -29,6 +29,12 @@ class WebAudioService : Service() {
             getAll(document).forEach(function(m){
                 if(m && typeof m.pause === 'function') m.pause();
             });
+            try {
+                var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+                if (p && typeof p.pauseVideo === 'function') {
+                    p.pauseVideo();
+                }
+            } catch(e){}
         })();
     """.trimIndent()
 
@@ -48,6 +54,12 @@ class WebAudioService : Service() {
                     m.play().catch(function(){});
                 }
             });
+            try {
+                var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+                if (p && typeof p.playVideo === 'function') {
+                    p.playVideo();
+                }
+            } catch(e){}
         })();
     """.trimIndent()
 

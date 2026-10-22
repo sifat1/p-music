@@ -44,6 +44,12 @@ object WebHolder {
                                     m.play().catch(function(){});
                                 }
                             });
+                            try {
+                                var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+                                if (p && typeof p.playVideo === 'function') {
+                                    p.playVideo();
+                                }
+                            } catch(e){}
                         })();
                     """.trimIndent(), null)
                 }
