@@ -36,6 +36,8 @@ data class Track(
 data class Found(val url: String, val label: String)
 
 class PlayerVM(app: Application) : AndroidViewModel(app) {
+    val settings = SettingsManager(app)
+
     var controller by mutableStateOf<MediaController?>(null)
     var item by mutableStateOf<MediaItem?>(null)
     var playing by mutableStateOf(false)
@@ -43,13 +45,14 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
     var repeat by mutableIntStateOf(Player.REPEAT_MODE_OFF)
     var pos by mutableLongStateOf(0); var dur by mutableLongStateOf(0)
     var tracks by mutableStateOf(emptyList<Track>())
+    var sortOption by mutableStateOf(settings.sortOption)
 
     // browser state
     val found = mutableStateListOf<Found>()
     var blobOnly by mutableStateOf(false)
     var webPlaying by mutableStateOf(false)
     var canBack by mutableStateOf(false)
-    var currentUrl by mutableStateOf("")
+    var currentUrl by mutableStateOf(settings.lastBrowserUrl)
     private val main = Handler(Looper.getMainLooper())
     private val mediaRx = Regex("""\.(mp3|m4a|aac|ogg|opus|wav|flac|mp4|webm|m3u8|mpd)(\?|#|$)""", RegexOption.IGNORE_CASE)
 
@@ -62,6 +65,11 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
         val f = MediaController.Builder(app, token).buildAsync()
         f.addListener({ controller = f.get().also { it.addListener(listener); sync(it) } }, ContextCompat.getMainExecutor(app))
         refresh()
+    }
+
+    fun updateSortOption(option: SortOption) {
+        sortOption = option
+        settings.sortOption = option
     }
 
     private fun sync(p: Player) {
@@ -173,11 +181,13 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(v: WebView, u: String, f: Bitmap?) {
                     found.clear(); blobOnly = false; currentUrl = u
+                    this@PlayerVM.settings.lastBrowserUrl = u
                     v.evaluateJavascript(BG_JS, null)
                     v.postDelayed({ scan() }, 400)
                 }
                 override fun onPageFinished(v: WebView, u: String) {
                     canBack = v.canGoBack();
+                    this@PlayerVM.settings.lastBrowserUrl = u
                     v.evaluateJavascript(BG_JS, null)
                     scan();
                     v.postDelayed({ scan() }, 1000)
@@ -188,7 +198,7 @@ class PlayerVM(app: Application) : AndroidViewModel(app) {
                     return null
                 }
             }
-            loadUrl("https://duckduckgo.com")
+            loadUrl(this@PlayerVM.settings.lastBrowserUrl)
         }.also { WebHolder.web = it }
     }
 

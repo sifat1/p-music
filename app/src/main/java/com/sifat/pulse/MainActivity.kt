@@ -2,9 +2,13 @@
 package com.sifat.pulse
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -38,10 +42,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
 import coil.compose.AsyncImage
@@ -80,11 +86,11 @@ class MainActivity : ComponentActivity() {
 fun fmt(ms: Long) = "%d:%02d".format(ms / 60000, ms / 1000 % 60)
 val grad = Brush.linearGradient(listOf(Color(0xFF6D4AFF), Color(0xFF2BD9C5)))
 
-enum class SortOption(val label: String) {
-    NAME_ASC("Name (A-Z)"),
-    NAME_DESC("Name (Z-A)"),
-    DATE_DESC("Date Added (Newest)"),
-    DATE_ASC("Date Added (Oldest)")
+enum class SortOption(val label: String, val shortLabel: String) {
+    NAME_ASC("Name (A to Z)", "A-Z"),
+    NAME_DESC("Name (Z to A)", "Z-A"),
+    DATE_DESC("Date (Newest)", "Newest"),
+    DATE_ASC("Date (Oldest)", "Oldest")
 }
 
 data class Bookmark(val name: String, val url: String, val badgeColor: Color)
@@ -99,7 +105,7 @@ val defaultBookmarks = listOf(
 )
 
 @Composable fun App(vm: PlayerVM = viewModel()) {
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember { mutableIntStateOf(vm.settings.lastTab) }
     var full by remember { mutableStateOf(false) }
     val perms = remember {
         if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
@@ -115,11 +121,11 @@ val defaultBookmarks = listOf(
             Column {
                 if (vm.item != null) MiniPlayer(vm) { full = true }
                 NavigationBar {
-                    NavigationBarItem(tab == 0, { tab = 0 }, { Icon(Icons.Default.LibraryMusic, null) }, label = { Text("Library") })
-                    NavigationBarItem(tab == 1, { tab = 1 }, { Icon(Icons.Default.Language, null) }, label = { Text("Browser") })
+                    NavigationBarItem(tab == 0, { tab = 0; vm.settings.lastTab = 0 }, { Icon(Icons.Default.LibraryMusic, null) }, label = { Text("Library") })
+                    NavigationBarItem(tab == 1, { tab = 1; vm.settings.lastTab = 1 }, { Icon(Icons.Default.Language, null) }, label = { Text("Browser") })
                 }
             }
-        }) { pad -> Box(Modifier.padding(pad)) { if (tab == 0) Library(vm) else Browser(vm) } }
+        }) { pad -> Box(Modifier.padding(pad)) { if (tab == 0) Library(vm, ask, perms) else Browser(vm) } }
         AnimatedVisibility(full, enter = slideInVertically { it }, exit = slideOutVertically { it }) { NowPlaying(vm) { full = false } }
     }
 }
@@ -131,9 +137,86 @@ val defaultBookmarks = listOf(
     }
 }
 
-@Composable fun Library(vm: PlayerVM) {
+@Composable fun Library(
+    vm: PlayerVM,
+    askLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>,
+    perms: Array<String>
+) {
+    val context = LocalContext.current
+    val hasAudioPerm = remember(vm.tracks) {
+        val perm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+        ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+    }
+
+    if (!hasAudioPerm) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(64.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Security,
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    Text(
+                        "Audio Permission Required",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "Pulse requires audio access permissions to scan and play your local music library. Grant permissions to proceed.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Button(
+                        onClick = { askLauncher.launch(perms) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Grant Permission", fontWeight = FontWeight.Bold)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Open App Settings")
+                    }
+                }
+            }
+        }
+        return
+    }
+
     var q by remember { mutableStateOf("") }
-    var sortOption by remember { mutableStateOf(SortOption.NAME_ASC) }
+    val sortOption = vm.sortOption
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
     val list = remember(vm.tracks, q, sortOption) {
@@ -146,6 +229,12 @@ val defaultBookmarks = listOf(
                     SortOption.DATE_ASC -> filtered.sortedBy { it.dateAdded }
                 }
             }
+    }
+
+    val currentSortIcon = when (sortOption) {
+        SortOption.NAME_ASC, SortOption.NAME_DESC -> Icons.Default.SortByAlpha
+        SortOption.DATE_DESC -> Icons.Default.Schedule
+        SortOption.DATE_ASC -> Icons.Default.CalendarToday
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -193,8 +282,8 @@ val defaultBookmarks = listOf(
                 FilterChip(
                     selected = true,
                     onClick = { sortMenuExpanded = true },
-                    label = { Text(sortOption.label, style = MaterialTheme.typography.labelMedium) },
-                    leadingIcon = { Icon(Icons.Default.Sort, contentDescription = "Sort", modifier = Modifier.size(16.dp)) },
+                    label = { Text(sortOption.shortLabel, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) },
+                    leadingIcon = { Icon(currentSortIcon, contentDescription = "Sort", modifier = Modifier.size(16.dp)) },
                     trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp)) }
                 )
 
@@ -203,6 +292,11 @@ val defaultBookmarks = listOf(
                     onDismissRequest = { sortMenuExpanded = false }
                 ) {
                     SortOption.entries.forEach { option ->
+                        val itemIcon = when (option) {
+                            SortOption.NAME_ASC, SortOption.NAME_DESC -> Icons.Default.SortByAlpha
+                            SortOption.DATE_DESC -> Icons.Default.Schedule
+                            SortOption.DATE_ASC -> Icons.Default.CalendarToday
+                        }
                         DropdownMenuItem(
                             text = {
                                 Text(
@@ -212,12 +306,12 @@ val defaultBookmarks = listOf(
                                 )
                             },
                             onClick = {
-                                sortOption = option
+                                vm.updateSortOption(option)
                                 sortMenuExpanded = false
                             },
-                            leadingIcon = if (option == sortOption) {
-                                { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
-                            } else null
+                            leadingIcon = {
+                                Icon(itemIcon, contentDescription = null, tint = if (option == sortOption) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         )
                     }
                 }
@@ -240,7 +334,7 @@ val defaultBookmarks = listOf(
         if (list.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    "No songs found. Grant audio access or add music to device.",
+                    "No songs found in device storage.",
                     modifier = Modifier.padding(32.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
