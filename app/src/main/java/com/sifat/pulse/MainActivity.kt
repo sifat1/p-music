@@ -19,6 +19,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,14 +39,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -54,6 +60,150 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 
+fun Modifier.glassSurface(
+    shape: Shape = RoundedCornerShape(16.dp),
+    backgroundColor: Color = Color(0x3B2C2248),
+    borderColor: Color = Color.White.copy(alpha = 0.18f)
+): Modifier = this
+    .clip(shape)
+    .background(
+        Brush.verticalGradient(
+            listOf(
+                backgroundColor.copy(alpha = 0.55f),
+                backgroundColor.copy(alpha = 0.25f)
+            )
+        )
+    )
+    .border(
+        width = 1.dp,
+        brush = Brush.linearGradient(
+            listOf(borderColor, borderColor.copy(alpha = 0.04f))
+        ),
+        shape = shape
+    )
+
+@Composable fun GlassActionButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+    trailingIcon: ImageVector? = null,
+    highlight: Boolean = false
+) {
+    Box(
+        modifier = modifier
+            .glassSurface(
+                shape = RoundedCornerShape(20.dp),
+                backgroundColor = if (highlight) Color(0x55492F8A) else Color(0x332E224A),
+                borderColor = if (highlight) Color(0xFFC3B0FF).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.18f)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = if (highlight) Color(0xFFC3B0FF) else Color.White
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            if (trailingIcon != null) {
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    trailingIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = Color.White.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
+val glassAppBackground = Brush.verticalGradient(
+    listOf(
+        Color(0xFF1B112E),
+        Color(0xFF100B1D),
+        Color(0xFF0A0713)
+    )
+)
+
+val RespectedTypography = Typography(
+    headlineLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 28.sp,
+        letterSpacing = (-0.5).sp,
+        color = Color(0xFFF4EFFA)
+    ),
+    headlineMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        letterSpacing = (-0.25).sp,
+        color = Color(0xFFF4EFFA)
+    ),
+    titleLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 19.sp,
+        color = Color(0xFFF4EFFA)
+    ),
+    titleMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        color = Color(0xFFF4EFFA)
+    ),
+    titleSmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp,
+        color = Color(0xFFF4EFFA)
+    ),
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
+        fontSize = 15.sp,
+        color = Color(0xFFE8E2F0)
+    ),
+    bodyMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 13.sp,
+        color = Color(0xFFD2CBDE)
+    ),
+    bodySmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        color = Color(0xFFC0B8CE)
+    ),
+    labelLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        color = Color(0xFFF4EFFA)
+    ),
+    labelMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp,
+        color = Color(0xFFF4EFFA)
+    )
+)
+
 class MainActivity : ComponentActivity() {
     override fun onPause() { super.onPause(); WebHolder.keepAlive() }
     override fun onStop() { super.onStop(); WebHolder.keepAlive() }
@@ -61,24 +211,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val darkScheme = darkColorScheme(
+            val glassColorScheme = darkColorScheme(
                 primary = Color(0xFFC3B0FF),
-                onPrimary = Color(0xFF321371),
+                onPrimary = Color(0xFF2C1368),
                 primaryContainer = Color(0xFF492F8A),
                 onPrimaryContainer = Color(0xFFE7DEFF),
                 secondary = Color(0xFF53D2C5),
                 onSecondary = Color(0xFF003733),
                 secondaryContainer = Color(0xFF00504B),
                 onSecondaryContainer = Color(0xFF73F5E7),
-                background = Color(0xFF13101A),
-                onBackground = Color(0xFFE8E5EE),
-                surface = Color(0xFF1C1826),
-                onSurface = Color(0xFFE8E5EE),
-                surfaceVariant = Color(0xFF2A2438),
-                onSurfaceVariant = Color(0xFFCDC6D7),
-                surfaceContainerHigh = Color(0xFF2C263A)
+                background = Color(0xFF100B1D),
+                onBackground = Color(0xFFF4EFFA),
+                surface = Color(0xFF1B112E),
+                onSurface = Color(0xFFF4EFFA),
+                surfaceVariant = Color(0x3B2C2248),
+                onSurfaceVariant = Color(0xFFD2CBDE),
+                surfaceContainerHigh = Color(0x52392B60)
             )
-            MaterialTheme(colorScheme = darkScheme) { App() }
+            MaterialTheme(colorScheme = glassColorScheme, typography = RespectedTypography) { App() }
         }
     }
 }
@@ -116,23 +266,47 @@ val defaultBookmarks = listOf(
     LaunchedEffect(vm.playing) { while (vm.playing) { vm.tick(); delay(500) } }
     BackHandler(full) { full = false }
 
-    Box(Modifier.fillMaxSize()) {
-        Scaffold(bottomBar = {
-            Column {
-                if (vm.item != null) MiniPlayer(vm) { full = true }
-                NavigationBar {
-                    NavigationBarItem(tab == 0, { tab = 0; vm.settings.lastTab = 0 }, { Icon(Icons.Default.LibraryMusic, null) }, label = { Text("Library") })
-                    NavigationBarItem(tab == 1, { tab = 1; vm.settings.lastTab = 1 }, { Icon(Icons.Default.Language, null) }, label = { Text("Browser") })
+    Box(
+        modifier = Modifier.fillMaxSize().background(glassAppBackground)
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                Column {
+                    if (vm.item != null) MiniPlayer(vm) { full = true }
+                    NavigationBar(
+                        containerColor = Color(0x6618112B),
+                        tonalElevation = 0.dp
+                    ) {
+                        NavigationBarItem(
+                            selected = tab == 0,
+                            onClick = { tab = 0; vm.settings.lastTab = 0 },
+                            icon = { Icon(Icons.Default.LibraryMusic, null) },
+                            label = { Text("Library", fontWeight = FontWeight.SemiBold) }
+                        )
+                        NavigationBarItem(
+                            selected = tab == 1,
+                            onClick = { tab = 1; vm.settings.lastTab = 1 },
+                            icon = { Icon(Icons.Default.Language, null) },
+                            label = { Text("Browser", fontWeight = FontWeight.SemiBold) }
+                        )
+                    }
                 }
             }
-        }) { pad -> Box(Modifier.padding(pad)) { if (tab == 0) Library(vm, ask, perms) else Browser(vm) } }
+        ) { pad -> Box(Modifier.padding(pad)) { if (tab == 0) Library(vm, ask, perms) else Browser(vm) } }
         AnimatedVisibility(full, enter = slideInVertically { it }, exit = slideOutVertically { it }) { NowPlaying(vm) { full = false } }
     }
 }
 
-@Composable fun Art(uri: Uri?, size: Dp, r: Dp = 12.dp, mod: Modifier = Modifier) {
-    Box(mod.size(size).clip(RoundedCornerShape(r)).background(grad), contentAlignment = Alignment.Center) {
-        Icon(Icons.Default.MusicNote, null, tint = Color.White.copy(.8f))
+@Composable fun Art(uri: Uri?, size: Dp, r: Dp = 14.dp, mod: Modifier = Modifier) {
+    Box(
+        mod.size(size)
+            .clip(RoundedCornerShape(r))
+            .background(grad)
+            .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(r)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(Icons.Default.MusicNote, null, tint = Color.White.copy(.85f))
         AsyncImage(uri, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     }
 }
@@ -153,10 +327,8 @@ val defaultBookmarks = listOf(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
+            Box(
+                modifier = Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp), backgroundColor = Color(0x402A1E4A))
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -166,31 +338,32 @@ val defaultBookmarks = listOf(
                     Box(
                         modifier = Modifier.size(64.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
+                            .background(Color(0x55C3B0FF)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.Security,
                             contentDescription = null,
                             modifier = Modifier.size(36.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = Color(0xFFC3B0FF)
                         )
                     }
                     Text(
                         "Audio Permission Required",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.White
                     )
                     Text(
                         "Pulse requires audio access permissions to scan and play your local music library. Grant permissions to proceed.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color.White.copy(alpha = 0.8f),
                         textAlign = TextAlign.Center
                     )
                     Button(
                         onClick = { askLauncher.launch(perms) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC3B0FF), contentColor = Color(0xFF230F55))
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
@@ -203,11 +376,12 @@ val defaultBookmarks = listOf(
                             }
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(0.3f))
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = null)
+                        Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White)
                         Spacer(Modifier.width(8.dp))
-                        Text("Open App Settings")
+                        Text("Open App Settings", color = Color.White)
                     }
                 }
             }
@@ -241,55 +415,51 @@ val defaultBookmarks = listOf(
         OutlinedTextField(
             value = q,
             onValueChange = { q = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).glassSurface(RoundedCornerShape(28.dp)),
             singleLine = true,
             shape = RoundedCornerShape(28.dp),
-            placeholder = { Text("Search songs or artists", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary) },
+            placeholder = { Text("Search songs or artists", color = Color.White.copy(alpha = 0.6f)) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color(0xFFC3B0FF)) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent
             )
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
+                GlassActionButton(
                     onClick = { if (list.isNotEmpty()) vm.play(list, Random.nextInt(list.size), true) },
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Icon(Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Shuffle", style = MaterialTheme.typography.labelLarge)
-                }
-                FilledTonalButton(
+                    icon = Icons.Default.Shuffle,
+                    text = "Shuffle",
+                    highlight = vm.shuffle
+                )
+                GlassActionButton(
                     onClick = { if (list.isNotEmpty()) vm.play(list, 0) },
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Play All", style = MaterialTheme.typography.labelLarge)
-                }
+                    icon = Icons.Default.PlayArrow,
+                    text = "Play All"
+                )
             }
 
             Box {
-                FilterChip(
-                    selected = true,
+                GlassActionButton(
                     onClick = { sortMenuExpanded = true },
-                    label = { Text(sortOption.shortLabel, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) },
-                    leadingIcon = { Icon(currentSortIcon, contentDescription = "Sort", modifier = Modifier.size(16.dp)) },
-                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    icon = currentSortIcon,
+                    text = sortOption.shortLabel,
+                    trailingIcon = Icons.Default.ArrowDropDown,
+                    highlight = true
                 )
 
                 DropdownMenu(
                     expanded = sortMenuExpanded,
-                    onDismissRequest = { sortMenuExpanded = false }
+                    onDismissRequest = { sortMenuExpanded = false },
+                    modifier = Modifier.glassSurface(RoundedCornerShape(16.dp), backgroundColor = Color(0xEE1E1433))
                 ) {
                     SortOption.entries.forEach { option ->
                         val itemIcon = when (option) {
@@ -302,7 +472,7 @@ val defaultBookmarks = listOf(
                                 Text(
                                     option.label,
                                     fontWeight = if (option == sortOption) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (option == sortOption) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    color = if (option == sortOption) Color(0xFFC3B0FF) else Color.White
                                 )
                             },
                             onClick = {
@@ -310,7 +480,7 @@ val defaultBookmarks = listOf(
                                 sortMenuExpanded = false
                             },
                             leadingIcon = {
-                                Icon(itemIcon, contentDescription = null, tint = if (option == sortOption) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(itemIcon, contentDescription = null, tint = if (option == sortOption) Color(0xFFC3B0FF) else Color.White.copy(0.7f))
                             }
                         )
                     }
@@ -326,7 +496,7 @@ val defaultBookmarks = listOf(
             Text(
                 text = "${list.size} ${if (list.size == 1) "song" else "songs"}",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color.White.copy(alpha = 0.7f),
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -337,22 +507,25 @@ val defaultBookmarks = listOf(
                     "No songs found in device storage.",
                     modifier = Modifier.padding(32.dp),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.7f)
                 )
             }
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 itemsIndexed(list, key = { _, t -> t.id }) { i, t ->
                     val isCurrent = t.id.toString() == vm.item?.mediaId
-                    Surface(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { vm.play(list, i) },
-                        color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
-                        shape = RoundedCornerShape(12.dp)
+                    Box(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                            .fillMaxWidth()
+                            .glassSurface(
+                                shape = RoundedCornerShape(16.dp),
+                                backgroundColor = if (isCurrent) Color(0x66492F8A) else Color(0x22241C38),
+                                borderColor = if (isCurrent) Color(0xFFC3B0FF).copy(0.5f) else Color.White.copy(0.1f)
+                            )
+                            .clickable { vm.play(list, i) }
                     ) {
                         ListItem(
                             headlineContent = {
@@ -362,7 +535,7 @@ val defaultBookmarks = listOf(
                                     overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.SemiBold,
-                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    color = if (isCurrent) Color(0xFFC3B0FF) else Color.White
                                 )
                             },
                             supportingContent = {
@@ -371,12 +544,12 @@ val defaultBookmarks = listOf(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = Color.White.copy(alpha = 0.7f)
                                 )
                             },
-                            leadingContent = { Art(t.art, 50.dp) },
+                            leadingContent = { Art(t.art, 48.dp) },
                             trailingContent = if (isCurrent && vm.playing) {
-                                { Icon(Icons.Default.VolumeUp, contentDescription = "Playing", tint = MaterialTheme.colorScheme.primary) }
+                                { Icon(Icons.Default.VolumeUp, contentDescription = "Playing", tint = Color(0xFFC3B0FF)) }
                             } else null,
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
@@ -389,20 +562,18 @@ val defaultBookmarks = listOf(
 
 @Composable fun MiniPlayer(vm: PlayerVM, open: () -> Unit) {
     val m = vm.item?.mediaMetadata
-    Surface(
+    Box(
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = open),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 8.dp
+            .glassSurface(RoundedCornerShape(20.dp), backgroundColor = Color(0x52392B60))
+            .clickable(onClick = open)
     ) {
         Column {
             Row(
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Art(m?.artworkUri, 46.dp, 10.dp)
+                Art(m?.artworkUri, 48.dp, 12.dp)
                 Column(
                     modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
                 ) {
@@ -412,32 +583,35 @@ val defaultBookmarks = listOf(
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.White
                     )
                     Text(
                         m?.artist?.toString() ?: "",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White.copy(alpha = 0.75f)
                     )
                 }
                 IconButton(
                     onClick = { if (vm.playing) vm.controller?.pause() else vm.controller?.play() },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                    modifier = Modifier.background(
+                        Brush.linearGradient(listOf(Color(0xFFC3B0FF), Color(0xFF9E86FF))),
+                        CircleShape
+                    )
                 ) {
                     Icon(
                         if (vm.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (vm.playing) "Pause" else "Play",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = Color(0xFF230F55)
                     )
                 }
             }
             LinearProgressIndicator(
                 progress = { if (vm.dur > 0) (vm.pos / vm.dur.toFloat()).coerceIn(0f, 1f) else 0f },
                 modifier = Modifier.fillMaxWidth().height(3.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                color = Color(0xFFC3B0FF),
+                trackColor = Color.White.copy(alpha = 0.12f)
             )
         }
     }
@@ -449,147 +623,169 @@ val defaultBookmarks = listOf(
     var seek by remember { mutableStateOf<Float?>(null) }
     val progress = seek ?: vm.pos.toFloat()
 
-    Column(
+    Box(
         modifier = Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF38236B), Color(0xFF141218))))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF321A63),
+                        Color(0xFF170F2B),
+                        Color(0xFF0B0715)
+                    )
+                )
+            )
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(24.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            IconButton(onClick = close) {
-                Icon(
-                    Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Close",
-                    modifier = Modifier.size(36.dp),
-                    tint = Color.White
-                )
-            }
-        }
-        Spacer(Modifier.weight(0.5f))
-        Art(
-            m?.artworkUri,
-            280.dp,
-            24.dp,
-            Modifier.size(280.dp).aspectRatio(1f)
-        )
-        Spacer(Modifier.height(32.dp))
-        Text(
-            m?.title?.toString() ?: "Unknown Title",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            m?.artist?.toString() ?: "Unknown Artist",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium,
-            color = Color.White.copy(alpha = 0.85f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(Modifier.height(24.dp))
-        Slider(
-            value = progress.coerceIn(0f, maxOf(vm.dur, 1).toFloat()),
-            onValueChange = { seek = it },
-            onValueChangeFinished = {
-                seek?.let {
-                    c?.seekTo(it.toLong())
-                    vm.pos = it.toLong()
-                }
-                seek = null
-            },
-            valueRange = 0f..maxOf(vm.dur, 1).toFloat(),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = Color.White.copy(alpha = 0.24f)
-            )
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                fmt(progress.toLong()),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White.copy(alpha = 0.9f)
-            )
-            Text(
-                fmt(vm.dur),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White.copy(alpha = 0.9f)
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { c?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }) {
-                Icon(
-                    Icons.Default.Shuffle,
-                    contentDescription = "Shuffle",
-                    tint = if (vm.shuffle) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f)
-                )
-            }
-            IconButton(onClick = { c?.seekToPrevious() }) {
-                Icon(
-                    Icons.Default.SkipPrevious,
-                    contentDescription = "Previous",
-                    modifier = Modifier.size(40.dp),
-                    tint = Color.White
-                )
-            }
-            FilledIconButton(
-                onClick = { if (vm.playing) c?.pause() else c?.play() },
-                modifier = Modifier.size(72.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
             ) {
-                Icon(
-                    if (vm.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (vm.playing) "Pause" else "Play",
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-            IconButton(onClick = { c?.seekToNext() }) {
-                Icon(
-                    Icons.Default.SkipNext,
-                    contentDescription = "Next",
-                    modifier = Modifier.size(40.dp),
-                    tint = Color.White
-                )
-            }
-            IconButton(onClick = {
-                c?.let {
-                    it.repeatMode = when (it.repeatMode) {
-                        Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                        Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                        else -> Player.REPEAT_MODE_OFF
-                    }
+                IconButton(
+                    onClick = close,
+                    modifier = Modifier.glassSurface(CircleShape, backgroundColor = Color(0x33FFFFFF))
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Close",
+                        modifier = Modifier.size(32.dp),
+                        tint = Color.White
+                    )
                 }
-            }) {
-                Icon(
-                    if (vm.repeat == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                    contentDescription = "Repeat",
-                    tint = if (vm.repeat != Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f)
+            }
+            Spacer(Modifier.weight(0.5f))
+            Box(
+                modifier = Modifier.size(280.dp)
+                    .glassSurface(RoundedCornerShape(28.dp), backgroundColor = Color(0x22FFFFFF), borderColor = Color.White.copy(0.3f))
+                    .padding(8.dp)
+            ) {
+                Art(
+                    m?.artworkUri,
+                    264.dp,
+                    22.dp,
+                    Modifier.fillMaxSize()
                 )
             }
+            Spacer(Modifier.height(32.dp))
+            Text(
+                m?.title?.toString() ?: "Unknown Title",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                m?.artist?.toString() ?: "Unknown Artist",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(24.dp))
+            Slider(
+                value = progress.coerceIn(0f, maxOf(vm.dur, 1).toFloat()),
+                onValueChange = { seek = it },
+                onValueChangeFinished = {
+                    seek?.let {
+                        c?.seekTo(it.toLong())
+                        vm.pos = it.toLong()
+                    }
+                    seek = null
+                },
+                valueRange = 0f..maxOf(vm.dur, 1).toFloat(),
+                colors = SliderDefaults.colors(
+                    thumbColor = Color(0xFFC3B0FF),
+                    activeTrackColor = Color(0xFFC3B0FF),
+                    inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                )
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    fmt(progress.toLong()),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+                Text(
+                    fmt(vm.dur),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(32.dp), backgroundColor = Color(0x28FFFFFF)).padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { c?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }) {
+                    Icon(
+                        Icons.Default.Shuffle,
+                        contentDescription = "Shuffle",
+                        tint = if (vm.shuffle) Color(0xFFC3B0FF) else Color.White.copy(alpha = 0.5f)
+                    )
+                }
+                IconButton(onClick = { c?.seekToPrevious() }) {
+                    Icon(
+                        Icons.Default.SkipPrevious,
+                        contentDescription = "Previous",
+                        modifier = Modifier.size(36.dp),
+                        tint = Color.White
+                    )
+                }
+                FilledIconButton(
+                    onClick = { if (vm.playing) c?.pause() else c?.play() },
+                    modifier = Modifier.size(64.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color(0xFFC3B0FF),
+                        contentColor = Color(0xFF230F55)
+                    )
+                ) {
+                    Icon(
+                        if (vm.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (vm.playing) "Pause" else "Play",
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+                IconButton(onClick = { c?.seekToNext() }) {
+                    Icon(
+                        Icons.Default.SkipNext,
+                        contentDescription = "Next",
+                        modifier = Modifier.size(36.dp),
+                        tint = Color.White
+                    )
+                }
+                IconButton(onClick = {
+                    c?.let {
+                        it.repeatMode = when (it.repeatMode) {
+                            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                            else -> Player.REPEAT_MODE_OFF
+                        }
+                    }
+                }) {
+                    Icon(
+                        if (vm.repeat == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                        contentDescription = "Repeat",
+                        tint = if (vm.repeat != Player.REPEAT_MODE_OFF) Color(0xFFC3B0FF) else Color.White.copy(alpha = 0.5f)
+                    )
+                }
+            }
+            Spacer(Modifier.weight(1f))
         }
-        Spacer(Modifier.weight(1f))
     }
 }
 
@@ -609,31 +805,37 @@ fun normalize(s: String): String {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = {
-                val homeUrl = "https://duckduckgo.com"
-                url = homeUrl
-                vm.web.loadUrl(homeUrl)
-            }) {
-                Icon(Icons.Default.Home, contentDescription = "Home", tint = MaterialTheme.colorScheme.primary)
+            IconButton(
+                onClick = {
+                    val homeUrl = "https://duckduckgo.com"
+                    url = homeUrl
+                    vm.web.loadUrl(homeUrl)
+                },
+                modifier = Modifier.glassSurface(CircleShape, backgroundColor = Color(0x33FFFFFF))
+            ) {
+                Icon(Icons.Default.Home, contentDescription = "Home", tint = Color(0xFFC3B0FF))
             }
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).padding(horizontal = 4.dp).glassSurface(RoundedCornerShape(28.dp)),
                 singleLine = true,
                 shape = RoundedCornerShape(28.dp),
-                placeholder = { Text("Search or enter URL", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                placeholder = { Text("Search or enter URL", color = Color.White.copy(alpha = 0.6f)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { vm.web.loadUrl(normalize(url)) }),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent
                 )
             )
-            IconButton(onClick = { vm.web.reload() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Reload", tint = MaterialTheme.colorScheme.onSurface)
+            IconButton(
+                onClick = { vm.web.reload() },
+                modifier = Modifier.glassSurface(CircleShape, backgroundColor = Color(0x33FFFFFF))
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = "Reload", tint = Color.White)
             }
         }
 
@@ -643,36 +845,34 @@ fun normalize(s: String): String {
             contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
             items(defaultBookmarks) { bookmark ->
-                FilterChip(
-                    selected = false,
-                    onClick = {
-                        url = bookmark.url
-                        vm.web.loadUrl(bookmark.url)
-                    },
-                    label = {
+                Box(
+                    modifier = Modifier
+                        .glassSurface(
+                            shape = RoundedCornerShape(18.dp),
+                            backgroundColor = Color(0x333B2E58),
+                            borderColor = Color.White.copy(alpha = 0.15f)
+                        )
+                        .clickable {
+                            url = bookmark.url
+                            vm.web.loadUrl(bookmark.url)
+                        }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(8.dp)
+                                .clip(CircleShape)
+                                .background(bookmark.badgeColor)
+                        )
+                        Spacer(Modifier.width(6.dp))
                         Text(
                             bookmark.name,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color.White
                         )
-                    },
-                    leadingIcon = {
-                        Box(
-                            modifier = Modifier.size(10.dp)
-                                .clip(CircleShape)
-                                .background(bookmark.badgeColor)
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = false,
-                        borderColor = Color.Transparent
-                    )
-                )
+                    }
+                }
             }
         }
 
@@ -682,30 +882,33 @@ fun normalize(s: String): String {
                 onClick = { vm.scan(); sheet = true },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                 icon = { Icon(Icons.Default.Headphones, contentDescription = null) },
-                text = { Text("Play as audio (${vm.found.size})", fontWeight = FontWeight.Bold) }
+                text = { Text("Play as audio (${vm.found.size})", fontWeight = FontWeight.Bold) },
+                containerColor = Color(0xFFC3B0FF),
+                contentColor = Color(0xFF230F55)
             )
-            else if (vm.blobOnly) Surface(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-                tonalElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh
+            else if (vm.blobOnly) Box(
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
+                    .glassSurface(RoundedCornerShape(16.dp), backgroundColor = Color(0x772A1E4A))
             ) {
                 Text(
                     "Streaming page: it plays in its own player. Press play, then minimize; audio keeps going.",
                     modifier = Modifier.padding(12.dp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.White
                 )
             }
         }
     }
-    if (sheet) ModalBottomSheet(onDismissRequest = { sheet = false }) {
+    if (sheet) ModalBottomSheet(
+        onDismissRequest = { sheet = false },
+        containerColor = Color(0xEE1A112E)
+    ) {
         Text(
             "Detected media",
             modifier = Modifier.padding(16.dp, 8.dp),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = Color.White
         )
         vm.found.toList().forEach { f ->
             ListItem(
@@ -715,7 +918,7 @@ fun normalize(s: String): String {
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.White
                     )
                 },
                 modifier = Modifier.clickable { vm.playUrl(f); sheet = false },
@@ -723,10 +926,11 @@ fun normalize(s: String): String {
                     Text(
                         Uri.parse(f.url).host ?: "",
                         maxLines = 1,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White.copy(alpha = 0.7f)
                     )
                 },
-                leadingContent = { Icon(Icons.Default.Headphones, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                leadingContent = { Icon(Icons.Default.Headphones, contentDescription = null, tint = Color(0xFFC3B0FF)) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
         }
         Spacer(Modifier.height(24.dp))
